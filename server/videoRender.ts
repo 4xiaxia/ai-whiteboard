@@ -61,11 +61,29 @@ class CdpClient {
   }
 }
 
-function getChromeExecutable() {
-  return (
-    process.env.CHROME_EXECUTABLE_PATH ||
-    process.env.GOOGLE_CHROME_BIN ||
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+const CHROME_EXECUTABLE_CANDIDATES = [
+  process.env.CHROME_EXECUTABLE_PATH,
+  process.env.GOOGLE_CHROME_BIN,
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+].filter((candidate): candidate is string => Boolean(candidate));
+
+async function getChromeExecutable() {
+  for (const candidate of CHROME_EXECUTABLE_CANDIDATES) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // Try the next known browser path.
+    }
+  }
+  throw new Error(
+    `找不到 Chrome/Chromium 可执行文件。请安装 chromium，并设置 CHROME_EXECUTABLE_PATH。已尝试：${CHROME_EXECUTABLE_CANDIDATES.join(
+      ", ",
+    )}`,
   );
 }
 
@@ -120,7 +138,8 @@ export async function renderScriptToWebmInHeadlessBrowser(params: {
   playbackSpeed: number;
 }) {
   const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), "ai-whiteboard-chrome-"));
-  const chrome = spawn(getChromeExecutable(), [
+  const chromeExecutable = await getChromeExecutable();
+  const chrome = spawn(chromeExecutable, [
     "--headless=new",
     "--disable-gpu",
     "--no-sandbox",

@@ -133,8 +133,8 @@ function failVideoRenderJob(id: string, error: Error) {
   job.reject(error);
 }
 
-function getBaseUrl(req: Request) {
-  return `${req.protocol}://${req.get("host")}`;
+function getLocalRenderBaseUrl() {
+  return `http://127.0.0.1:${process.env.PORT || "5000"}`;
 }
 
 function stringifyScriptInput(value: unknown) {
@@ -328,7 +328,7 @@ export async function registerRoutes(
         scriptText = generated.scriptText;
       }
 
-      const baseUrl = getBaseUrl(req);
+      const baseUrl = getLocalRenderBaseUrl();
       await renderScriptToWebmInHeadlessBrowser({
         baseUrl,
         scriptText,
