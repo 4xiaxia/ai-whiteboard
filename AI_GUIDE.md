@@ -2,13 +2,146 @@
 
 > 本文档专为 AI（LLM）阅读。读完后，你应当能够仅凭用户的口头需求，产出符合规范的 JSON 命令脚本，粘贴进白板的"JSON 命令脚本"输入框、点击"运行脚本"即可看到逐步动画 + 旁白讲解。
 
-**近期更新**：新增 Azure TTS 旁白朗读、播放器速度调节和播放器暂停/继续功能。AI 生成新脚本时不要再插入 `wait` 等待点；学生需要思考时可以随时手动暂停。TTS 播放采用"段落首尾同步"：每条命令和它的旁白同时开始，白板按自己的动画速度绘制；如果白板先结束，会等当前旁白播完再进入下一条命令。`annotate_circle` 圈画重点已优化为稳定、顺滑、清晰的电子白板批注效果。新增 `write_math`、`write_math_steps`、`write_division_layout`，用于清晰渲染分数、根号、平方、推导步骤和带余数除法竖式。数学推导预检会检查空等号和不完整推导，公式不能写成 `M - 2 =` 或 `M = 30 + 2 =` 这种半截板书，必须把结果补完整。新增 `write_text_segments` 与 `emphasize_text`，用于精准强调单个数字、短词或一行文字中的局部内容。新增 `draw_rectangle`、`draw_triangle`、`draw_circle`、`draw_arc_arrow`、`draw_brace`，用于更积极地绘制结构化图示。新增 `move_object`，可让已绘制对象实时平移动画；新增 `draw_coordinate_system`、`draw_function`、`plot_point`、`draw_coordinate_segment`，用于初中函数图像、坐标几何和数形结合讲解。新增几何专用命令 `draw_point`、`draw_segment`、`draw_ray`、`draw_angle`、`mark_equal_segments`、`mark_parallel`、`mark_perpendicular`、`highlight_polygon`，用于稳定讲解几何证明、辅助线、角标、等长、平行、垂直和全等区域。新增 `construct_geometry`，以 JSXGraph 辅助的几何构造层计算垂足、交点、外接圆并自动展开成白板绘图命令。新增 `laser_pointer`，用于每一步讲解时像老师上课一样临时指示当前关注位置。
+**近期更新**：新增 `draw_image`，上传题图生成讲解时可以直接把原题图片放进白板，再用激光笔、箭头和短标签讲解关键位置；带图题不必默认完整复刻原图。新增 Azure TTS 旁白朗读、播放器速度调节和播放器暂停/继续功能。AI 生成新脚本时不要为了"让学生思考"滥用 `wait` 等待点；学生需要思考时可以随时手动暂停。但长文本、范文、题干重述、关键结论和修改后的原文必须给足可见时长，必要时可以用较长 `duration`、慢速 `laser_pointer` 或少量 `wait` 做阅读停顿。TTS 播放采用"段落首尾同步"：每条命令和它的旁白同时开始，白板按自己的动画速度绘制；如果白板先结束，会等当前旁白播完再进入下一条命令。长正文、作文段落、题干、点评长句优先用显式 `x/y/width/height` 的 `write_paragraph` 自动换行；不要依赖模板框或多个大字号 `write_text`/`write_text_segments` 手搓坐标。`annotate_circle` 圈画重点已优化为稳定、顺滑、清晰的电子白板批注效果。新增 `write_math`、`write_math_steps`、`write_division_layout`，用于清晰渲染分数、根号、平方、推导步骤和带余数除法竖式。数学推导预检会检查空等号和不完整推导，公式不能写成 `M - 2 =` 或 `M = 30 + 2 =` 这种半截板书，必须把结果补完整。新增 `write_text_segments` 与 `emphasize_text`，用于精准强调单个数字、短词或一行文字中的局部内容。新增 `draw_rectangle`、`draw_triangle`、`draw_circle`、`draw_arc_arrow`、`draw_brace`，用于更积极地绘制结构化图示。新增 `move_object`，可让已绘制对象实时平移动画；新增 `draw_coordinate_system`、`draw_function`、`plot_point`、`draw_coordinate_segment`，用于初中函数图像、坐标几何和数形结合讲解。新增几何专用命令 `draw_point`、`draw_segment`、`draw_ray`、`draw_angle`、`mark_equal_segments`、`mark_parallel`、`mark_perpendicular`、`highlight_polygon`，用于稳定讲解几何证明、辅助线、角标、等长、平行、垂直和全等区域。新增 `construct_geometry`，以 JSXGraph 辅助的几何构造层计算垂足、交点、外接圆并自动展开成白板绘图命令。新增 `laser_pointer`，用于每一步讲解时像老师上课一样临时指示当前关注位置。
 
-**AI 生成器更新**：应用主页现在支持让用户直接输入讲课需求，也支持上传题目图片。图片会先由后端视觉模型识别为题干、选项、图中文字和关键图形关系，再交给脚本生成器。后端调用 Perplexity Agent API，并通过 `openai/gpt-5.2` 生成白板脚本。生成后会先经过本地预检，再把预检报告交给 AI 自动修复，最多循环数轮，直到脚本可播放或只剩低风险建议。你作为脚本生成模型时，必须把输出控制为可解析 JSON，不要输出 Markdown 代码围栏；修复脚本时要优先解决预检报告里的错误、布局风险、激光笔缺失和小目标强调不准等问题。
+**AI 生成器更新**：应用主页现在支持让用户直接输入讲课需求，也支持上传题目图片。图片会先由后端视觉模型识别为题干、选项、图中文字和关键图形关系，再交给脚本生成器。后端调用 Perplexity Agent API，并通过 `openai/gpt-5.2` 生成白板脚本。生成后会先经过本地预检，再把预检报告交给 AI 自动修复，最多循环数轮，直到脚本可播放或只剩低风险建议。你作为脚本生成模型时，必须把输出控制为可解析 JSON，不要输出 Markdown 代码围栏；修复脚本时要优先解决预检报告里的错误、布局风险、激光笔缺失和小目标强调不准等问题。生成讲解时还要同步整理 `knowledgeSummary`，供学生随时打开知识点卡片查看；这部分不要塞进白板脚本最后一页。
 
 **多页白板更新**：新增 `pages` 与 `switch_page`。不要把所有内容硬塞进一张白板。一页只讲一个小问题，讲完后切到下一页；需要回顾时可以切回旧页。多页模式优先用于完整题目讲解、步骤较多的推导、需要读题/找规律/计算/总结分开呈现的内容。
 
 ---
+
+## 0.0 状态矩阵规则：写下一笔前先看白板占用
+
+生成脚本时，必须把白板当成有状态的画面，而不是一串互不相关的命令。每一页、每一次 `clear_canvas` 后的新场景，都要维护一个内部“白板状态矩阵”：
+
+- 默认 `1200 × 800` 画布按 `6 列 × 4 行` 粗略划分，`R1C1` 是左上，`R4C6` 是右下。
+- 每创建一个可见对象，都要记录它的 `bbox`、所在页、所在场景、占用网格和对象 id。
+- 写下一条可见命令前，先检查当前页/当前场景已经有哪些对象。新文字、公式、段落、表格式信息、图形、箭头、坐标图、流程图、图示标签不能放进已占用或明显拥挤的网格。
+- 这条规则适用于所有学科：数学、物理、化学、生物、语文、英语、历史、政治、地理、经济学、社会科学解释、写作点评、阅读理解等，都必须先分区再落笔。
+- 文字/公式/段落是最高优先级可读对象：任何文字和公式都不能压住图形、箭头、坐标轴、流程节点、图片重构或其他文字。图形内部元素可以自然相交，但只要与文字/公式发生遮挡或贴得太近，就必须移动、擦除或拆页。
+- 每页先规划“题干区、图示区、推导区、结论区、对比区、例子区”等逻辑区域。一页放不下时优先 `switch_page`，不要缩小字号或贴边硬塞。
+- 动笔前要像老师看黑板一样先找空白区：先估算将要写/画的内容尺寸，短公式至少预留约 `240×70`，推导步骤或段落至少预留约 `420×140`，图示/图表至少预留约 `420×260`。只有找到能容纳内容的空白 `bbox` 才能落笔。
+- 长公式不能横向硬塞。凡是含 `\Longleftrightarrow`、`\Rightarrow`、多个中文 `\text{...}`、大分式或两边都很长的公式，优先改成 `write_math_steps` 拆成 2–4 行，或切到新页单独讲；不要把长公式放在图形右侧再延伸出画布。
+- 如果当前页没有足够宽敞的空白区，必须先 `erase_object`/`clear_canvas` 清理不再需要的对象，或 `switch_page` 新开一页；不要在已有内容旁边硬塞。
+- 如果确实要复用同一区域，必须先使用 `erase_object`、`clear_canvas`，或 `switch_page` 新开一页；不要通过覆盖旧内容、贴边、压框、把字号缩到很小来硬塞。
+- 不要把白板做成 PPT 模板页。默认不要使用 `layout_page`、`slotId` 或可见模板框；把它想成一张白纸/黑板，直接用显式坐标书写、画图、换页。
+- 修复脚本时，后端会提供当前白板状态矩阵和对象 bbox。必须优先根据矩阵搬移、分页或擦除对象，避免继续在拥挤区域书写。
+
+## 0. 重要表达规则：旁白直接教学生，不描述白板操作
+
+所有 `narration`、对白、老师点评和讲解文案，都必须像老师正在面对学生本人上课，而不是像系统在解释白板脚本。
+
+硬性要求：
+
+- 生成题目讲解脚本时，开场第一段有效 `narration` 必须先朗读原题，或在题干很长、识别不完整、用户只给口头需求时先复述问题。不要一上来直接讲公式、答案或技巧。
+- 开场读题可以自然说成“这道题问的是……”或直接读题干；不要说“我来念一遍”“我把题目读出来”这类描述白板/朗读动作的话。
+- 不要用语言描述白板上的操作过程。旁白不能说“我新建一页”“我切到下一页”“我擦掉这条线”“我把它圈起来”“我用红色线画出来”“这里先写一个标题”。
+- 不要把命令动作当成讲解内容。白板会自己画、擦、移动、强调；旁白只讲“为什么看这里、这里说明什么、学生该怎么理解”。
+- 语气要直接面向正在听课的学生本人。可以说“你看这里”“先别急”“这一步要抓住……”“你可以先暂停想一想”，不要说“让孩子看”“给学生展示”“家长可以让孩子……”这种面向第三方的口吻。
+- 老师身份要自然稳定：像课堂上对学生说话，而不是对用户、家长、系统或脚本生成器说话。
+- 切页、擦除、清空、移动、圈画、下划线、激光笔移动等都属于视觉动作，不需要在旁白里播报。只有当某条线、某个圈、某个箭头本身承载知识含义时，才解释它代表的概念。
+
+反例：
+
+```jsonc
+{ "narration": "我再新建一页，把这条辅助线擦掉。" }
+{ "narration": "我用红色把这个公式圈起来。" }
+{ "narration": "家长可以让孩子看左边这句话。" }
+```
+
+推荐：
+
+```jsonc
+{ "narration": "这一步只保留真正有用的信息：谁、在哪里、发生了什么。" }
+{ "narration": "这个公式是关键，后面的计算都从它出发。" }
+{ "narration": "你先看左边这句话，它的问题不是意思错，而是过程太短。" }
+```
+
+## 0.0.1 重要知识点规则：整理给学生随时查看，不强行插入脚本
+
+生成讲解脚本时，除了 `explanation` 和白板脚本本体，还要整理 `knowledgeSummary`。它用于应用里的“知识点”速查卡，学生可以在听课过程中随时点开，看一看本题涉及的核心公式、定理、适用条件和易错点；如果听不懂，还可以用 `followUpPrompt` 再生成一节专题讲解。
+
+硬性要求：
+
+- `knowledgeSummary` 不是白板脚本的一部分，不要把它追加成脚本最后一页，也不要在白板脚本顶层增加自定义字段。
+- 只写干货，不写讲稿。`overview` 不超过 40 个中文字符；每条 `explanation` 控制在 15–40 个中文字符。
+- `concepts` 放概念名和判定条件；`formulas` 放公式/定理和适用条件；`principles` 放解题原理、守恒/等量关系、易错点；`background` 只放真正必要的前置知识，没有就空数组。
+- 禁止套话和废话，例如“这里整理了……”“本节课主要……”“帮助你理解……”“这个知识点很重要……”。不要把背景知识写成一段泛泛解释。
+- `followUpPrompt` 必须能直接用于再生成专题讲解，要求 AI 专门讲清这些知识点，而不是重新解原题。
+- 如果题目很简单，也至少整理 1–2 个核心概念或公式；如果确实没有公式，`formulas` 可以为空数组。
+
+## 0.1 重要节奏规则：板书不能追着旁白跑
+
+生成脚本时，必须把 `duration` 当成学生观看板书动画的真实时间，而不是随手填的过渡时间。即使播放器会等待 TTS 旁白播完，脚本本身也必须保证：在没有 TTS、TTS 被手机浏览器暂停、语音缓存未命中或用户关闭语音时，白板仍然不会飞快闪过。
+
+尤其注意：
+
+- 长正文、范文、修改后的原文、题干重述、作文段落，不能用很短的 `duration` 快速刷屏。
+- 复述题目、题干分析、讲解说明、总结句这类长文字字号要克制：比标题小很多，比普通短标签再小约 `2px`。一般用 `write_paragraph` 时 `fontSize` 建议 `22–26`；必须用单行 `write_text` 时，超过 16 个中文字符建议把字号比原计划下调 `2`，超过 28 个中文字符继续拆行或改用段落。
+- 每一行普通 `write_text` 建议至少 `1000–1800ms`。
+- 超过 20 个中文字符的一行文字建议 `1500–2500ms`。
+- 连续展示一整段范文或修改后的原文时，禁止每行只给 `300–500ms`；这会导致正文一闪而过，后续只剩划线、圈画、激光笔等批注线条。
+- 一整段重要文本写完后，必须安排一次可见停顿：可以用最后一条文字命令较长 `duration`，也可以插入 `wait` 或慢速 `laser_pointer` 让学生读完。
+- 划线、圈画、强调、激光笔讲解不能紧跟在快速刷出的正文后面。必须先让正文稳定呈现，再进入批注讲解。
+- 带旁白命令的 `duration` 也要和旁白大致匹配。30–40 个中文字符的旁白通常需要 `5000–8000ms`，不要只写 `1000–2000ms`。
+- 段落、图示、公式不要共用同一块视觉区域。`write_paragraph` 讲概念时必须显式给出 `x/y/width/height`，后续图示应放在明显下方或切到新页；公式步骤不要贴近底边，三行以上的 `write_math_steps` 建议从 `y <= 560` 开始，或降低 `fontSize` / `lineGap`。
+
+反例：下面这种写法会导致手机端、无 TTS 或 TTS 被暂停时，范文一闪而过。
+
+```jsonc
+{
+  "type": "write_text",
+  "id": "draft_l1",
+  "text": "从前，有一座大山。山上有一片绿绿的草地，",
+  "x": 90,
+  "y": 135,
+  "fontSize": 27,
+  "duration": 450
+}
+```
+
+推荐：给长句足够的书写时间，并在整段文字写完后留出阅读停顿。
+
+```jsonc
+{
+  "type": "write_text",
+  "id": "draft_l1",
+  "text": "从前，有一座大山。山上有一片绿绿的草地，",
+  "x": 90,
+  "y": 135,
+  "fontSize": 27,
+  "duration": 1800
+},
+{
+  "type": "laser_pointer",
+  "id": "lp_read_draft",
+  "x": 90,
+  "y": 135,
+  "to": { "x": 900, "y": 600 },
+  "duration": 4000,
+  "narration": "我们先完整读一遍这篇修改后的作文。"
+}
+```
+
+## 0.2 重要理科题规则：先图示关系，再公式推导
+
+数学、物理、化学等理科题不能只把题干和公式堆在一页里。体验最好的讲解通常是“读题抓条件 → 画出关系/过程图 → 写公式推导 → 答案总结”。
+
+硬性要求：
+
+- 完整理科题优先多页：读题/条件页、图示关系页、公式推导页、答案总结页。不要把长题干、图、公式、答案挤在同一页。
+- 题干必须用显式 `x/y/width/height` 的 `write_paragraph` 自动换行；不要用模板 `layout_page + slotId`，也不要用一条大字号 `write_text` 或 `write_text_segments` 写完整题干。
+- 公式、变量关系、单位换算、推导步骤必须用 `write_math` 或 `write_math_steps`；不要把 `m_1`、`\\frac{1}{2}`、`F=kx`、`qvB=mv^2/R`、`48/24=2` 这类公式塞进 `write_text` 或 `write_text_segments`。
+- 如果要在中文中突出变量或数字，普通文字和公式分开写：中文用 `write_text`/`write_paragraph`，公式另起一行用 `write_math`，局部强调再用 `emphasize_text` 或激光笔。
+- 物理题必须画关键关系图：半衰期题画时间轴/倍半衰期示意；弹簧/滑块题画两个木块和弹簧、位移方向；带电粒子进磁场题画磁场符号、入射速度、圆周轨迹和半径。
+- 物理过程的分段关系优先用彩色线段、箭头、段名标签和公式标签表达；不要用 `draw_brace` 横跨大半个图去括运动轨迹。大括号只适合短范围分组，跨度过长会抢画面重点。
+- 不要使用模板 slot 来安排题干和说明文字；直接在白板空白处落笔，显式给出段落矩形，并把正文 y 坐标放在标题下方至少 `60px`。
+- 每个新的阶段必须使用唯一 `pageId`。不要对同一个 `pageId` 反复 `switch_page` 后重新堆内容；播放器会恢复旧页面内容，导致新旧文字重叠。需要新页面就创建新 `pageId`，如 `formulas_2`、`summary_2`。
+- 每页只保留一个视觉重点。图示页少量标签 + 关系式；推导页用 `write_math_steps` 清晰排开；总结页突出最终答案和单位。
+- 短物理计算题通常控制在 `4–5` 页、`45–80` 条命令内。不要为了“完整”拆成七八页，也不要每页复制一整套小图。
+- 图示参照要克制：完整物理图只在图示关系页出现。推导页如果确实需要参照，只放 `3–6` 个元素的极简小图；多数情况下只保留关键公式和一个激光笔指向即可。
+- 磁场题不要铺满很多 `×` 或 `·` 符号；3–6 个磁场符号足够表达方向。不要为每个符号单独写很多对象，避免页面过满。
+- 旁白不能说“写出来”“写成”“画出”“念一遍”“下一步要做的是写……”。这些听起来像操作播报。改成“关系是……”“可以得到……”“关键在于……”“把两个力相等理解成……”。
 
 ## 1. 工具定位
 
@@ -49,11 +182,14 @@
 
 - 尽量完整提取题干、选项、图中文字、坐标、角标、单位、表格内容、图例和已知条件。
 - 对图形题要用自然语言补充图中关系，例如“点 D 在圆上”“AB 与 CD 相交于 E”“图像经过 (0,1) 和 (2,5)”。
+- 对坐标图、函数图、F-t/v-t/s-t 等物理图像、折线图、阶梯图或统计图，必须逐图提取坐标轴名称和单位、横纵轴刻度、每一段数据线段的起点/终点或区间和值、水平段/斜线段/零值段、虚线辅助线和图下注记。不要只写“已知 F-t 图和 v-t 图”。
 - 不要在 OCR 阶段直接解题，也不要编造看不清的内容。看不清时标为 `[看不清]`。
 - 脚本生成阶段看到“从题目图片中识别出的内容”时，应先把题目重述清楚，再分阶段讲解。
 - 对几何图片题，若只识别到主点和几何关系，优先用 `construct_geometry` 重构图形，不要手算垂足、交点、外接圆等坐标。
 - 对物理、化学、生物、地理等带图题，不能只讲 OCR 出来的文字。必须把图示部分提取成可讲解内容，并在白板上重构关键结构，例如实验装置、受力/运动方向、光路、电路、液面高度、滑轮/杠杆、统计图表等。
-- 生成讲解脚本时，开头必须先“读题”：展示题目文字并用旁白读出题干。读题后必须“分析题干”：拆出已知条件、图中信息、要求什么、需要用哪个概念或规律。
+- 生成脚本时，如果系统提供原题图片资源，占位符为 `__SOURCE_IMAGE_1__`，优先用 `draw_image` 展示原题图，再在图上或旁边用 `laser_pointer`、箭头、短标签讲解关键关系；不要完整复刻原图。
+- 只有需要额外重画图像作为辅助示意时，若 OCR 里有 F-t、v-t、s-t、函数图、折线图或阶梯图，必须先 `draw_coordinate_system`，再用 `draw_coordinate_segment` 按识别出的每一段逐条画全：分段常量画水平段，匀变速画斜线段，静止/零值段也要画在坐标轴上，不能留下空坐标系，不能只画其中一段。只有解析式图像才用 `draw_function`，不要用它猜图片里的分段实验图像。
+- 生成讲解脚本时，开头必须先“读题”：第一段有效旁白必须朗读原题或复述问题，并在白板上展示题目文字/关键词。读题后必须“分析题干”：拆出已知条件、图中信息、要求什么、需要用哪个概念或规律。
 - 如果暂时无法贴原图，优先用白板结构化命令重构图示；重构图示不要求像素级还原，但必须保留解题所需的对象、标签、方向、数值和关系。
 
 ---
@@ -158,6 +294,51 @@
 - 每段可单独设置 `color`、`fontSize`、`bold`；未设置时继承外层值。
 - 小目标强调的推荐流程：先用 `write_text_segments` 单独拆出目标，再用 `emphasize_text` 指向 `targetId + segmentId`。
 
+#### 3.1.2 长文命令：像老师在白板上写，不做模板页
+
+遇到题干重述、作文范文、阅读材料、修改后原文、左右对比讲解时，优先使用显式 `x/y/width/height` 的 `write_paragraph` 自动换行，不要继续手写大量 `write_text` 坐标。
+
+不要默认使用 `layout_page`、`slotId` 或模板框。白板应该像一张白纸/黑板，老师在上面自由写写画画；只要文字不重叠、不截断，图像完整即可，不要做出 PPT 卡片感。
+
+长段文字用 `write_paragraph` 自动换行：
+
+```jsonc
+{
+  "type": "write_paragraph",
+  "id": "draft_paragraph",
+  "x": 80,
+  "y": 130,
+  "width": 760,
+  "height": 220,
+  "text": "从前，有一座大山。山上有一片绿绿的草地，草地旁住着一条小蛇……",
+  "fontSize": 24,
+  "duration": 6000,
+  "narration": "我们先完整读一遍这段修改后的作文。"
+}
+```
+
+作文修改、扩写前后对比用 `revision_compare`：
+
+```jsonc
+{
+  "type": "revision_compare",
+  "id": "compare_sentence",
+  "x": 80,
+  "y": 140,
+  "width": 980,
+  "height": 280,
+  "before": "小蛇救了小兔。",
+  "after": "小蛇飞快地爬过来，勇敢地挡在小兔前面，大声说：“不许欺负我的朋友！”",
+  "note": "加上动作和语言，画面就清楚了。",
+  "duration": 5000,
+  "narration": "左边是原来的短句，右边是加上动作和语言后的句子。"
+}
+```
+
+- `revision_compare` 也应显式给 `x/y/width/height`，不要依赖 `layout_page` 的 slot。
+- 局部词语强调仍可后续配合 `laser_pointer`、`annotate_object` 或 `emphasize_text`。
+- 长文命令仍要给足 `duration`；不要因为自动换行就压缩阅读时间。
+
 ### 3.2 数学公式命令
 
 复杂数学表达不要用 `write_text` 硬拼。遇到分数、根号、上下标、规范等式推导、带余数除法时，优先使用本节命令。
@@ -185,6 +366,7 @@
 - `displayMode` 默认 `false`。普通行内公式用 `false`；居中大公式或分式较高时可用 `true`。
 - 支持常见写法：`\\frac{3}{4}`、`a^2 + b^2 = c^2`、`\\sqrt{25}=5`、`23 \\div 4 = 5 \\cdots 3`。
 - 公式旁边有中文时，优先用 `write_text` 写中文，再用 `write_math` 写公式，不要把大段中文塞进 KaTeX。
+- 禁止把 LaTeX 写进 `write_text`。例如 `A=60^\\circ\\Rightarrow OM=\\frac{AO}{2}` 必须用 `write_math`，不能作为普通红色文本输出。
 
 #### 3.2.2 `write_math_steps` — 逐行写公式推导
 
@@ -344,7 +526,30 @@
 - 简单曲线通常 5–12 个点即可，复杂轮廓可用 20–60 个点。
 - `width: 2–4` 适合细线说明，`width: 5–8` 适合重点圈画。
 
-### 3.5.1 基础图形命令 — 更有表现力地组织板书
+### 3.5.1 `draw_image` — 直接展示原题图片
+
+```jsonc
+{
+  "type": "draw_image",
+  "id": "source_question",
+  "src": "__SOURCE_IMAGE_1__",
+  "x": 60,
+  "y": 120,
+  "width": 720,
+  "height": 420,
+  "radius": 8,
+  "duration": 500,
+  "narration": "先看原题图，关键是判断这几段图像分别代表什么。"
+}
+```
+
+- 上传题图生成讲解时，系统会提供 `__SOURCE_IMAGE_1__` 占位符；`draw_image.src` 必须原样填写这个占位符。
+- 带图题优先显示原图，再用 `laser_pointer`、`draw_arrow`、短标签或旁边的公式讲解关键位置。
+- 如果识别结果提供了图片锚点，`draw_image.anchors` 可以保留这些 `{id,label,bbox,point}`。`bbox` 和 `point` 都是相对原图的 `0~1` 归一化坐标。
+- 指向原图局部时优先用锚点，不要手猜坐标：`laser_pointer` 可写 `"imageAnchor": "anchor_id"`；`annotate_circle` 可写 `"imageAnchor": "anchor_id"`；`draw_arrow` 可写 `"fromImageAnchor"` 或 `"toImageAnchor"`。后端会自动换算成白板坐标。
+- 不要为了复刻原图而重画所有细节；只有需要抽象关系或辅助推导时，才额外画简化图。
+
+### 3.5.2 基础图形命令 — 更有表现力地组织板书
 
 当你要表达结构、分类、边界、集合、几何对象、步骤区域、循环关系、归纳关系时，可以使用基础图形命令。不要只写一堆文字，也不要再用多条 `draw_line` 拼矩形或三角形。
 
@@ -475,8 +680,9 @@
 - 把多行步骤归为一组；
 - 标出“这几项合起来”“这两类共同组成整体”；
 - 解释分组、归纳、条件集合、公式中的一段结构。
-- 大括号会用规整的排版字形渲染，适合正式教学板书；不要用多条线或自由路径手工拼大括号。
+- 大括号会用轻量 SVG 线条渲染，适合短范围分组；不要用多条线或自由路径手工拼大括号。
 - `depth` 控制大括号占用的侧向空间。普通三行文字建议 `28–40`，太大会挤压文字，太小会显得局促。
+- 不要用大括号横跨整张物理图或长运动轨迹。讲三段位移、三段过程时，优先用彩色线段/箭头 + 段名标签 + 公式标签表达，画面更清楚。
 
 方向规则：
 - `orientation: "right"`：竖向大括号向右展开，像 `{`。
@@ -637,6 +843,7 @@
 
 函数图像使用建议：
 - 讲一次函数：先画坐标系，再画函数图像，接着标出截距和一两个点，最后用 `draw_coordinate_segment` 表示“横向变化/纵向变化”。
+- 讲题目图片里的 F-t、v-t、s-t、折线图、阶梯图或实验数据图时，不要用 `draw_function` 猜表达式；用 `draw_coordinate_segment` 逐段重构每个数据段和必要虚线辅助线。每个 `draw_coordinate_system` 后必须至少有一个图像数据命令，不能只留下空坐标轴。
 - 讲二次函数：画 `x^2` 或 `a*x^2 + b*x + c`，用 `plot_point` 标顶点、交点，再用 `annotate_object` 或 `emphasize_text` 强调关键结论。
 - 讲反比例函数：用 `1/x` 这类表达式，坐标范围不要包含过密刻度；必要时分左右两支分别设置 `xMin/xMax`。
 - 讲坐标几何：用 `plot_point` 标点，用 `draw_coordinate_segment` 连线，比手工估算像素位置更准确。
@@ -655,6 +862,14 @@
 - 第 3 页：添加辅助线；
 - 第 4 页：证明步骤，一步只强调一个逻辑关系；
 - 第 5 页：总结证明链。
+
+几何题多页讲解的版面规则：
+
+- 几何图形必须作为每一页的稳定参照物。不要只在第一页画图，后面翻到推导页就只剩公式。
+- 推荐固定布局：左侧或右上角保留同一张缩略几何图，右侧/下方写条件、推导和结论。
+- 每一页可以重画同一张基础图，但要保持 A、B、C、O、H、M 等主点的相对位置基本一致，避免学生翻页后重新找图。
+- 后续页只在基础图上叠加本页关注的辅助线、角标、等长/垂直标记或高亮区域；不要每页换一套完全不同的点位。
+- 如果某页是公式推导页，也要保留一个简化图，并用 `laser_pointer` 在公式和图形之间来回指示。
 
 #### `draw_point` — 画几何点和点名
 
@@ -837,6 +1052,7 @@
 - 证明全等、相似、面积关系时，用 `highlight_polygon` 高亮当前比较区域。
 - 激光笔要沿着线段或角弧移动：讲 `AB = AC` 时，激光笔先扫 AB，再扫 AC。
 - 右侧证明文字要和左侧图形同步，不要一次性写完整证明。
+- 多页几何证明要保持“图形区 + 推导区”的稳定版面：每一页都保留关键几何图，推导文字不要占满整页。
 - 不要用 `annotate_circle` 圈住小角、小点或短线段；几何条件应使用专用标记。
 
 #### `construct_geometry` — JSXGraph 辅助几何构造层
@@ -1102,6 +1318,7 @@
 - `targetId`：目标文字对象 id，可以是 `write_text` 或 `write_text_segments`。
 - `segmentId`：可选。若目标是 `write_text_segments`，推荐指定要强调的片段 id。
 - `style` 支持 `"bold"`、`"color"`、`"font_size"`、`"underline"`、`"dot"`。
+- `style` 必须严格使用上述 5 个枚举；不要写 `"highlight"`、`"circle"`、`"ring"`、`"pulse"`、`"spotlight"`、`"box"`、`"mark"` 等别名。
 - `color` 控制变色、下划线或着重号颜色，默认蓝色。
 - `fontSize` 只在 `style: "font_size"` 时使用。
 - `width` 只在 `style: "underline"` 或 `style: "dot"` 时使用，小数字建议 `1.5–2.5`。
@@ -1198,7 +1415,10 @@
 ## 3.10 旁白字段 `narration` 详解
 
 - 强烈建议大部分绘制/擦除命令都带 `narration`。
-- 旁白应是第一人称口语，像一个亲和、有耐心、会打比方的老师在讲课。
+- 旁白应像一个亲和、有耐心、会打比方的老师在面对学生本人讲课。
+- 旁白不要描述白板操作过程，不要说“我画/我写/我擦/我圈/我新建一页/我切到下一页/我把它移到右边”。这些动作画面会自己呈现，旁白要讲知识点、思路和学生该注意的地方。
+- 旁白不要面向第三方，不要说“让孩子看”“给学生展示”“家长可以……”。要直接对正在听课的学生说：“你看这里”“这一步要抓住……”“先想一想……”。
+- 不要把老师写成操作员。老师不是在介绍脚本怎么执行，而是在帮助学生理解内容。
 - 不要写成机械说明书，不要像播报字段含义。要自然、接地气，有一点课堂感。
 - 允许适度冗余和反复强调。学生理解需要过程，关键概念可以换一种说法再讲一遍。
 - 在恰当的时候可以轻微幽默，但幽默要服务理解，不要喧宾夺主。
@@ -1218,6 +1438,17 @@
 - 幽默：可以轻一点，例如“余数这个小尾巴可不能丢，它往往就是答案的门牌号。”
 - 结尾：要把答案和方法都收束清楚，例如“所以答案是菊花，更重要的是：以后看到循环，就先找一轮有几个。”
 - 不要为了显得专业而说得冷冰冰；学生不是 JSON 解析器，学生需要慢慢听懂。
+
+旁白反例与改写：
+
+- 反例：“我再新建一页，写下第二步。”  
+  推荐：“第二步要看事情是怎么发生的。”
+- 反例：“我把这句话用红色圈起来。”  
+  推荐：“这句话是转折点，危险就是从这里开始的。”
+- 反例：“我擦掉刚才的辅助线。”  
+  推荐：“刚才的辅助关系已经用完了，现在只保留最终要比较的部分。”
+- 反例：“家长可以让孩子看左边。”  
+  推荐：“你先看左边，原句的问题是信息太少。”
 
 ---
 
@@ -1408,15 +1639,20 @@
 - 如果为了塞进一页而缩小字号、画很多框、画很多箭头，说明应该分页。
 - 每页保留一个视觉重点，不要同时讲两个新概念。
 - 需要回顾时可以切回旧页，不要把旧内容复制到新页导致拥挤。
+- 但几何证明、函数图像、物理装置等依赖图示的题，翻页后仍要保留关键图示作为参照；不要让学生在纯文字/纯公式页里脱离图形理解推导。
 - 预检或优化时，如果发现一页过满，应拆成多页，而不是继续压缩字号或增加框线。
 
 图形选择建议：
 
+- 一页有标题、左右栏、三栏、作文修改对比或长正文时，仍然把白板当作空白黑板：用显式 `x/y/width/height` 放内容，不要先画模板框，不要依赖 `layout_page` 或 `slotId`。
+- 长题干、阅读材料、作文范文、修改后原文优先用 `write_paragraph`，不要拆成十几条 `write_text`。
+- 作文扩写、病句修改、原句/修改后对比优先用 `revision_compare`，不要手工画两个框再塞文字。
 - 有“范围、模块、容器、条件块、结论块”且确实需要分区时，才用 `draw_rectangle`。普通文字、普通公式、普通提示不要默认套框。
 - 有“几何三角形、三要素、三方关系”时，用 `draw_triangle`。
 - 有“集合、分类、圆心半径、循环节点”时，用 `draw_circle`。
 - 有“方向、因果、输入输出、映射”时，用 `draw_arrow`；有“循环、返回、下一轮、反馈”时，用 `draw_arc_arrow`。
 - 有“几行内容属于同一组、几个条件合起来、公式局部结构”时，用 `draw_brace`。
+- 有“上传题图、原题截图、图文混合题”时，优先用 `draw_image` 展示原图，再做局部标注。
 - 有“函数图像、坐标轴、坐标点、斜率、截距、顶点、交点”时，用 `draw_coordinate_system` + `draw_function` + `plot_point`，不要手工估算像素拼图。
 - 指向坐标系里具体数值时，优先用 `plot_point`、`draw_coordinate_segment`；箭头只能作为辅助连接，不要让箭头本身替代坐标定位。
 - 有“运动、平移、拖动比较、点从 A 到 B”时，用 `move_object`，让变化过程本身被看见。
@@ -1440,7 +1676,7 @@
 - 整体不是合法 JSON 对象。
 - 缺少 `canvas` 或 `commands`。
 - 命令缺少必填字段。
-- `type` 不在 `{set_canvas, switch_page, write_text, write_text_segments, write_math, write_math_steps, write_division_layout, draw_line, draw_arrow, draw_path, draw_rectangle, draw_triangle, draw_circle, draw_arc_arrow, draw_brace, move_object, draw_coordinate_system, draw_function, plot_point, draw_coordinate_segment, draw_point, draw_segment, draw_ray, draw_angle, mark_equal_segments, mark_parallel, mark_perpendicular, highlight_polygon, construct_geometry, erase_object, erase_area, clear_canvas, laser_pointer, annotate_underline, annotate_circle, annotate_object, annotate_math_bbox, emphasize_text, clear_annotations, wait}` 之内。
+- `type` 不在 `{set_canvas, switch_page, layout_page, write_text, write_text_segments, write_paragraph, revision_compare, write_math, write_math_steps, write_division_layout, draw_line, draw_arrow, draw_path, draw_rectangle, draw_triangle, draw_circle, draw_arc_arrow, draw_brace, move_object, draw_coordinate_system, draw_function, plot_point, draw_coordinate_segment, draw_point, draw_segment, draw_ray, draw_angle, mark_equal_segments, mark_parallel, mark_perpendicular, highlight_polygon, construct_geometry, erase_object, erase_area, clear_canvas, laser_pointer, annotate_underline, annotate_circle, annotate_object, annotate_math_bbox, emphasize_text, clear_annotations, wait}` 之内。
 - 坐标不是 `[number, number]` 或数值字段类型错误。
 - `draw_path.points` 少于 2 个点。
 - `erase_object` 没有 `targetId` 或 `targetIds`。
@@ -1449,14 +1685,14 @@
 
 **不支持** 的特性，请不要尝试生成：
 - 任意未定义图形命令，例如 `draw_rect`（矩形请用 `draw_rectangle`）
-- 图片、任意 SVG path、贝塞尔曲线
+- 任意 SVG path、贝塞尔曲线
 - 旋转或缩放已绘制元素（当前 `move_object` 只支持平移）
 - 延时命令、并行播放、循环
 - 字体族选择（默认中文回退到 PingFang SC / Microsoft YaHei）
 - 多人协作、保存/加载
 - 单独删除某一条批注（只能用 `clear_annotations` 清除整个批注图层）
 
-换页 → 用 `switch_page`；矩形/框 → 用 `draw_rectangle`；三角形 → 用 `draw_triangle`；圆/集合圈 → 用 `draw_circle`；直线/辅助线 → 用 `draw_line`；自由曲线/涂鸦 → 用 `draw_path`；规范数学公式 → 用 `write_math` 或 `write_math_steps`；带余数除法竖式 → 用 `write_division_layout`；直线方向关系 → 用 `draw_arrow`；循环/返回/轮次关系 → 用 `draw_arc_arrow`；分组归纳 → 用 `draw_brace`；已绘制对象平移动画 → 用 `move_object`；坐标轴和函数图像 → 用 `draw_coordinate_system`、`draw_function`、`plot_point`、`draw_coordinate_segment`；几何证明 → 用 `draw_point`、`draw_segment`、`draw_ray`、`draw_angle`、`mark_equal_segments`、`mark_parallel`、`mark_perpendicular`、`highlight_polygon`；图片题/复杂构造重建 → 用 `construct_geometry`；每步讲解定位 → 用 `laser_pointer`；擦除 → 按场景用 `erase_object`、`erase_area` 或 `clear_canvas`；小数字/短词精准强调 → 用 `write_text_segments` + `emphasize_text`；大范围划重点/批注 → 用 `annotate_underline`、`annotate_circle`、`annotate_object` 或 `annotate_math_bbox`，讲完后用 `clear_annotations` 清除；需要课堂停顿 → 用旁白提示用户手动暂停，不要生成 `wait`。
+换页 → 用 `switch_page`；长正文/题干/范文 → 用显式坐标的 `write_paragraph`；作文修改前后对比 → 用显式坐标的 `revision_compare`；原题图片 → 用 `draw_image`；矩形/框 → 只在确实表示范围/集合/流程节点时用 `draw_rectangle`；三角形 → 用 `draw_triangle`；圆/集合圈 → 用 `draw_circle`；直线/辅助线 → 用 `draw_line`；自由曲线/涂鸦 → 用 `draw_path`；规范数学公式 → 用 `write_math` 或 `write_math_steps`；带余数除法竖式 → 用 `write_division_layout`；直线方向关系 → 用 `draw_arrow`；循环/返回/轮次关系 → 用 `draw_arc_arrow`；分组归纳 → 用 `draw_brace`；已绘制对象平移动画 → 用 `move_object`；坐标轴和函数图像 → 用 `draw_coordinate_system`、`draw_function`、`plot_point`、`draw_coordinate_segment`；几何证明 → 用 `draw_point`、`draw_segment`、`draw_ray`、`draw_angle`、`mark_equal_segments`、`mark_parallel`、`mark_perpendicular`、`highlight_polygon`；复杂构造重建 → 用 `construct_geometry`；每步讲解定位 → 用 `laser_pointer`；擦除 → 按场景用 `erase_object`、`erase_area` 或 `clear_canvas`；小数字/短词精准强调 → 用 `write_text_segments` + `emphasize_text`；大范围划重点/批注 → 用 `annotate_underline`、`annotate_circle`、`annotate_object` 或 `annotate_math_bbox`，讲完后用 `clear_annotations` 清除；需要课堂停顿 → 用旁白提示用户手动暂停，不要生成 `wait`。
 
 ---
 
@@ -1467,12 +1703,18 @@
 - [ ] 输出是**单一 JSON 对象**，没有任何前后缀文字、Markdown、代码围栏
 - [ ] 顶层有 `canvas` 与 `commands`
 - [ ] `canvas.width` 和 `canvas.height` 都是数字
-- [ ] `commands` 是数组，且每个元素 `type` 属于 `{write_text, write_text_segments, write_math, write_math_steps, write_division_layout, draw_line, draw_arrow, draw_path, draw_rectangle, draw_triangle, draw_circle, draw_arc_arrow, draw_brace, move_object, draw_coordinate_system, draw_function, plot_point, draw_coordinate_segment, draw_point, draw_segment, draw_ray, draw_angle, mark_equal_segments, mark_parallel, mark_perpendicular, highlight_polygon, construct_geometry, erase_object, erase_area, clear_canvas, laser_pointer, annotate_underline, annotate_circle, annotate_object, annotate_math_bbox, emphasize_text, clear_annotations, set_canvas, switch_page}`；`wait` 仅旧脚本兼容，新脚本不要生成
+- [ ] `commands` 是数组，且每个元素 `type` 属于 `{layout_page, write_paragraph, revision_compare, write_text, write_text_segments, write_math, write_math_steps, write_division_layout, draw_line, draw_arrow, draw_path, draw_image, draw_rectangle, draw_triangle, draw_circle, draw_arc_arrow, draw_brace, move_object, draw_coordinate_system, draw_function, plot_point, draw_coordinate_segment, draw_point, draw_segment, draw_ray, draw_angle, mark_equal_segments, mark_parallel, mark_perpendicular, highlight_polygon, construct_geometry, erase_object, erase_area, clear_canvas, laser_pointer, annotate_underline, annotate_circle, annotate_object, annotate_math_bbox, emphasize_text, clear_annotations, set_canvas, switch_page}`；`wait` 仅旧脚本兼容，新脚本不要生成
 - [ ] 完整讲解已使用 `pages` 和 `switch_page` 分页；每一页只讲一个小问题，没有把读题、分析、计算、总结都挤在同一页
 - [ ] 每页主要对象不超过 `12–14` 个；如果超过，已拆成下一页
+- [ ] 长正文、作文范文、题干重述优先使用 `write_paragraph` 自动换行；作文修改前后对比优先使用 `revision_compare`
+- [ ] 没有在普通讲解中使用 `layout_page` 或 `slotId`；长段落和作文对比都使用显式 `x/y/width/height`
+- [ ] 文字之间没有重叠：标题、正文、彩色关键词、点评、结论各自有独立空间；普通文字行距至少约 `1.45 × fontSize`
+- [ ] 不用多个大字号 `write_text`/`write_text_segments` 拼一整段长句；超过一行的内容改用 `write_paragraph`，左右对比改用 `revision_compare`
 - [ ] 每个绘制/批注对象都有合法 `id`；动画命令有合理 `duration`
 - [ ] 所有坐标都在 `0..canvas.width` × `0..canvas.height` 范围内
 - [ ] 每一段 `narration` 都有对应的 `laser_pointer` 指示区域，学生能立刻知道旁白说的是哪里
+- [ ] `narration` 直接面向学生本人，没有“让孩子看”“给学生展示”“家长可以……”这类第三方口吻
+- [ ] `narration` 没有描述白板操作过程，没有“我新建一页”“我擦除”“我画/写/圈/框/移动/切换”这类操作播报
 - [ ] 每个 `laser_pointer` 的 `x/y/to/path/radius/style` 与旁白目标一致，且没有遮挡文字主体
 - [ ] 除单个小数字、坐标点等小目标外，激光笔优先使用 `to` 或 `path` 顺滑移动，不是简单点一下
 - [ ] `draw_arrow.from` 是箭尾，`draw_arrow.to` 是箭头尖端，方向没有写反
@@ -1481,8 +1723,11 @@
 - [ ] 结构化内容在必要时使用 `draw_rectangle`、`draw_triangle`、`draw_circle`、`draw_arc_arrow`、`draw_brace` 等图形，而不是堆文字或手工拼线
 - [ ] `draw_arc_arrow` 的角度按 `0=右, 90=下, 180=左, 270=上` 理解，`clockwise` 没有写反
 - [ ] `move_object` 的 `targetId` 引用已存在对象；用 `by` 表示相对移动，用 `to` 表示绝对目标位置
+- [ ] 不用 `move_object` 做对象的初始摆放；对象还没创建时，直接在创建命令中设置最终坐标
 - [ ] 函数图像已先创建 `draw_coordinate_system`，`draw_function.expression` 使用显式乘号，例如 `2*x+1`
+- [ ] 题图中的 F-t/v-t/s-t/折线/阶梯/统计图已用 `draw_coordinate_segment` 逐段画全；没有空坐标系，没有漏掉 0 值段、水平延续段或虚线辅助线
 - [ ] 几何证明已优先使用几何专用命令：点用 `draw_point`，边和辅助线用 `draw_segment`/`draw_ray`，角用 `draw_angle`，等长/平行/垂直分别用 `mark_equal_segments`/`mark_parallel`/`mark_perpendicular`
+- [ ] 多页几何证明的每一页都保留关键几何图作为参照，且主点相对位置基本一致；不存在只写公式、不放图的推导页
 - [ ] 需要比较全等、相似或面积关系时，已用 `highlight_polygon` 淡色高亮参与证明的图形区域；没有用圈画代替几何标记
 - [ ] 图片题或复杂几何构造已优先使用 `construct_geometry` 计算垂足、交点、外接圆；没有手动猜 E/F/H 等构造点坐标
 - [ ] `draw_path.points` 至少包含两个合法坐标点，且顺序符合笔迹移动方向
@@ -1500,6 +1745,6 @@
 - [ ] 没有主动生成 `wait` 等待点；需要学生思考时，旁白提示用户可手动暂停
 - [ ] 文字按估算宽度不会溢出画布
 - [ ] 色值是 6 位 hex（`#rrggbb`）或合法 CSS 颜色
-- [ ] 讲解命令带有自然口语的 `narration` 字段，串起来读得通顺像一段讲解；没有任何“有旁白但无激光笔指示”的讲解段落
+- [ ] 讲解命令带有自然口语的 `narration` 字段，串起来读得通顺像老师直接给学生上课；没有任何“有旁白但无激光笔指示”的讲解段落
 
 通过以上各项 → 输出。
